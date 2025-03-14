@@ -1,0 +1,114 @@
+---
+title: "Joining Census 2021 DA Table Data to Boundaries"
+author: "Dr. Jason Goetz"
+date: "03-14-2025"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+```{r}
+library(sf) # Work with vector spatial data
+library(data.table) # Faster table operations
+library(mapview) # View spatial data
+```
+
+
+## Load Custom Functions
+
+```{r}
+getCensusTable <- function(x, characteristic, dguid = "2021S051235300381") {
+  x <- x[DGUID == dguid,]
+  x$CHARACTERISTIC_NAME <- iconv(x$CHARACTERISTIC_NAME, from = "latin1", to = "UTF-8", sub = "")
+  categories <- grep("^[^ ]", x$CHARACTERISTIC_NAME, value = TRUE)
+  
+  census_tables <- x$CHARACTERISTIC_NAME
+  table_index <- list()
+  census_topic <- c()
+  
+  for (i in seq_along(census_tables)) {
+    if (grepl("^[^ ]", census_tables[i])) {
+      table_index <- append(table_index, list(census_topic))
+      census_topic <- c(i)
+    } else {
+      census_topic <- append(census_topic, i)
+    }
+  }
+  table_index <- append(table_index, list(census_topic))[-1]
+  
+  if (is.numeric(characteristic)) {
+    result <- x[table_index[[characteristic]],]
+  } else {
+    table_ind <- which(categories == characteristic)
+    result <- x[table_index[[table_ind]],]
+  }
+  return(result)
+}
+
+listCensusTables <- function(x) {
+  x$CHARACTERISTIC_NAME <- iconv(x$CHARACTERISTIC_NAME, from = "latin1", to = "UTF-8", sub = "")
+  categories <- grep("^[^ ]", x$CHARACTERISTIC_NAME, value = TRUE)
+  result <- data.frame(index = 1:length(categories), characteristic_name = categories)
+  return(result)
+}
+```
+
+## Load Census DA Data
+
+```{r}
+d <- fread("C:/teaching/GG_369/98-401-X2021006_Ontario_eng_CSV/98-401-X2021006_English_CSV_data_Ontario.csv")
+da <- st_read("C:/teaching/GG_369/kw_census_da.shp")
+d_sel <- d[DGUID %in% da$DGUID,]
+```
+
+## Summarize the Census Data Characteristics
+This listCensusTables() function is used to find the table names (characteristics) within 
+
+
+```{r}
+categories <- listCensusTables(d_sel)
+View(categories)
+```
+
+## Extract Census Data
+
+```{r}
+df <- data.frame(DGUID = da$DGUID,
+                 population = NA,
+                 median_house_income = NA,
+                 unemploy_rate = NA,
+                 visible_minority_rate = NA)
+
+for(i in 1:nrow(da)) {
+  #print(paste(i, "of", nrow(da), "DA's"))
+  dguid = da$DGUID[i]
+  
+  df$population[i] <- getCensusTable(d_sel, "Population, 2021", dguid = dguid)$C1_COUNT_TOTAL
+  df$unemploy_rate[i] <- getCensusTable(d_sel, "Unemployment rate", dguid = dguid)$C10_RATE_TOTAL 
+  income <- getCensusTable(d_sel, "Total - Income statistics for private households - 100% data", dguid = dguid)
+  df$median_house_income[i] <- income$C1_COUNT_TOTAL[2]
+  race <- getCensusTable(d_sel, 91, dguid = dguid)
+  df$visible_minority_rate[i] <- race$C10_RATE_TOTAL[2]
+}
+```
+
+## Join Census Data to Spatial DA Boundaries
+
+```{r}
+da_join <- cbind(da, df)
+```
+
+## Visualization
+
+```{r}
+mapview(da_join, zcol = "median_house_income")
+```
+
+## Export Results
+
+```{r eval = FALSE}
+st_write(da_join, "C:/teaching/GG_369/census_2021_da_join.gpkg")
