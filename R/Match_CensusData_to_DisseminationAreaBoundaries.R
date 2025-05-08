@@ -77,7 +77,7 @@ listCensusTables <- function(x){
   # Using 
   da_sel <- x[1,]
   id <- x$DGUID[1]
-  d_da <- d_sel[DGUID == id,]
+  d_da <- da_sel[DGUID == id,]
   d_da$CHARACTERISTIC_NAME <- iconv(d_da$CHARACTERISTIC_NAME, from = "latin1", to = "UTF-8", sub = "")
   categories <- grep("^[^ ]", d_da$CHARACTERISTIC_NAME, value = TRUE)
   result <- data.frame(index = 1:length(categories), characteristic_name = categories)
