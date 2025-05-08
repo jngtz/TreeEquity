@@ -178,7 +178,7 @@ for(i in 1:nrow(da)){
   inequality <- getCensusTable(d_sel, 55, dguid = dguid)
   df$p90p10_ratio[i] <- inequality$C10_RATE_TOTAL[5]
   
-  low_income <- d_da[table_index[[50]],]
+  low_income <- getCensusTable(d_sel, 50, dguid = dguid)
   df$low_income_rate[i] <- low_income$C10_RATE_TOTAL[1]
   
   ## Ownership ####
