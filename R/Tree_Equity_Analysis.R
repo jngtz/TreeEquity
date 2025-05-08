@@ -8,13 +8,13 @@
 
 # BY: Jason Goetz, jgoetz@wlu.ca
 
-# DATE: March 19, 2024
+# DATE: May 8, 2025
 
 # Method
-# 1. Load 2021 Census Data
+# 1. Load 2021 Census Data & Fill Missing Values
 # 2. Calculate % Tree Canopy Coverage (2019)
 # 3. Calculate Heat Disparity
-# 4. Calculate Priority Idex
+# 4. Calculate Priority Index
 # 5. Calculate Tree Equity Score
 # 6. Create Plots and Export Data
 
