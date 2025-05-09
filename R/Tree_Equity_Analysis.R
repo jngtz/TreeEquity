@@ -236,7 +236,9 @@ na_income <- da_join[is.na(da_join$median_house_income),]
 for(i in 1:nrow(na_income)){
   
   na_da <- na_income[i,]
-  ct_contains_da <- ct[st_within(na_da, ct)[[1]],]
+  ct_contains_da <- ct[st_within(st_centroid(na_da), ct)[[1]],]
+  #^ We use centroids of DA's to make the spatial query within easier to
+  # to work if a DA boundary is along a CT boundary.
 
   income <- getCensusTable(d_ct_sel, "Total - Income statistics for private households - 100% data", 
                               dguid = ct_contains_da$DGUID)
@@ -251,13 +253,18 @@ mapview(da_join, zcol = "median_house_income")
 
 na_unemployment <- da_join[is.na(da_join$unemploy_rate),]
 
-# Just one, we will do it manually
+na_da <- na_unemployment
+ct_contains_da <- ct[st_within(st_centroid(na_da), ct)[[1]],]
 
-# Find DGUID from ct_sel
-mapview(ct_sel) + mapview(na_unemployment)
+# Let's have a look what we did...
+na_da_centroid <- st_centroid(na_da)
+mapview(ct_contains_da) + 
+  mapview(na_unemployment, col.region = "black") + 
+  mapview(na_da_centroid, col.region = "red") +
+  mapview(ct_sel, col.region = "lightblue")
 
 rate <- getCensusTable(d_ct_sel, "Unemployment rate", 
-                           dguid = 	"2021S05075410002.15")
+                           dguid = 	ct_contains_da$DGUID)
   
 da_join$unemploy_rate[da_join$DGUID == na_unemployment$DGUID] <- rate$C10_RATE_TOTAL
 da_join$comments[da_join$DGUID == na_unemployment$DGUID] <- "Missing DA unemployment rate filled with CT data"
@@ -268,19 +275,37 @@ mapview(da_join, zcol = "unemploy_rate")
 
 # Append comments
 da_join$comments[is.na(da_join$low_income_rate)] <- paste0(da_join$comments[is.na(da_join$low_income_rate)], "Low-income filled with CT data")
-da_join$low_income_rate [is.na(da_join$low_income_rate )] <- mean(da_join$low_income_rate , na.rm=TRUE)
+#da_join$low_income_rate [is.na(da_join$low_income_rate )] <- mean(da_join$low_income_rate , na.rm=TRUE)
 
 na_lowincome <- da_join[is.na(da_join$low_income_rate ),]
 
 for(i in 1:nrow(na_lowincome)){
   
   na_da <- na_lowincome[i,]
-  ct_contains_da <- ct[st_within(na_da, ct)[[1]],]
+  ct_contains_da <- ct[st_within(st_centroid(na_da), ct)[[1]],]
   
   low_income <- getCensusTable(d_ct_sel, 50, 
                            dguid = ct_contains_da$DGUID)
   
   da_join$low_income_rate[da_join$DGUID == na_da$DGUID] <- low_income$C10_RATE_TOTAL[1] # Median total income of household in 2020 ($) 
+  da_join$comments[da_join$DGUID == na_da$DGUID] <- "Missing DA median house income filled with CT data"
+}
+
+
+da_join$comments[is.na(da_join$visible_minority_rate)] <- paste0(da_join$comments[is.na(da_join$visible_minority_rate)], "Visibile minority rate filled with CT data")
+#da_join$low_income_rate [is.na(da_join$low_income_rate )] <- mean(da_join$low_income_rate , na.rm=TRUE)
+
+na_minority_rate <- da_join[is.na(da_join$visible_minority_rate ),]
+
+for(i in 1:nrow(na_lowincome)){
+  
+  na_da <- na_minority_rate[i,]
+  ct_contains_da <- ct[st_within(st_centroid(na_da), ct)[[1]],]
+  
+  minority_rate <- getCensusTable(d_ct_sel, 91, 
+                               dguid = ct_contains_da$DGUID)
+  
+  da_join$visible_minority_rate[da_join$DGUID == na_da$DGUID] <- minority_rate$C10_RATE_TOTAL[2]# Median total income of household in 2020 ($) 
   da_join$comments[da_join$DGUID == na_da$DGUID] <- "Missing DA median house income filled with CT data"
 }
 
@@ -387,7 +412,7 @@ heat_disparity <- mask(heat_disparity, kitchener_bnd)
 heat_disparity <- crop(heat_disparity, kitchener_bnd)
 
 # Can export raster
-writeRaster(heat_disparity, filename = "Kitchener_HeatDisparity_LandsatSurfaceTemp_20220716_30m.tif", overwrite = TRUE)
+#writeRaster(heat_disparity, filename = "Kitchener_HeatDisparity_LandsatSurfaceTemp_20220716_30m.tif", overwrite = TRUE)
 
 # Calculate heat disparity index for each DA
 da_join$heat_disparity <- da_join$mean_surfacetemp - mean_urban_bnd_surface_temp
@@ -454,7 +479,7 @@ da_join$has_treecover_30per[da_join$treecover_percent < 30] <- 1
 # percent diff to goal
 da_join$treecover_to_30per <- round(30 - da_join$treecover_percent,2)
 da_join$treecover_to_30per[da_join$treecover_to_30per <= 0] <- 0
-mapview(da_join, zcol = 'treecover_to_30per', )
+mapview(da_join, zcol = 'treecover_to_30per')
 
 nTreeCover <- normInd(da_join$treecover_to_30per/100)
 
@@ -546,6 +571,54 @@ ggplot(da_join, aes(x = treecover_percent, y = mean_surfacetemp)) +
 
 setwd("../..")
 
+
+
+# Visualize with Leaflet #######################################################
+
+library(leaflet)
+library(htmlwidgets)
+
+
+# Relative image paths (must be accessible)
+#img_paths <- c("images/image1.jpg", "images/image2.jpg")  # change as needed
+
+img_paths <- paste0("C:/teaching/TreeEquity/Plots/",da_join$radarchart)
+# Create HTML popup with clickable image links
+popup_content <- paste0(
+  '<div style="width:420px; display: flex; justify-content: left;">',
+  '<img src="', img_paths, '" style="width:400px;">',
+  '</div>'
+)
+
+
+
+
+# Create leaflet map
+
+da_wgs84 <- st_transform(da_join, 4326)
+
+
+# Create color palette function using Viridis
+pal <- colorNumeric(palette = "viridis", domain = da_wgs84$priority_index)
+
+# Create map
+m <- leaflet(data = da_wgs84) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+    fillColor = ~pal(priority_index),
+    fillOpacity = 0.7,
+    color = "white",
+    weight = 1,
+    popup = popup_content
+  ) %>%
+  addLegend(
+    pal = pal,
+    values = ~priority_index,
+    title = "Priority index",
+    opacity = 1
+  )
+m
+saveWidget(m, "priority_map.html", selfcontained = TRUE)
 
 # Export Analysis on DA's ######################################################
 
