@@ -297,7 +297,7 @@ da_join$comments[is.na(da_join$visible_minority_rate)] <- paste0(da_join$comment
 
 na_minority_rate <- da_join[is.na(da_join$visible_minority_rate ),]
 
-for(i in 1:nrow(na_lowincome)){
+for(i in 1:nrow(na_minority_rate)){
   
   na_da <- na_minority_rate[i,]
   ct_contains_da <- ct[st_within(st_centroid(na_da), ct)[[1]],]
@@ -448,7 +448,7 @@ mapview(da_join, zcol = "priority_index")
 
 # This is an un-weighted score, but we can also add weights [site suitability]
 
-E_wgt <- nAge * .3 +
+E_wgt <- nAge * .3 + 
   nEmployment * .1 + 
   nIncome * .1  + 
   nLanguage * .1 + 
