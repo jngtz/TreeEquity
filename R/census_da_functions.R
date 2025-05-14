@@ -3,6 +3,10 @@ getCensusTable <- function(x, characteristic, dguid = "2021S051235300381"){
   # Get's census table based on characteristic name or index from characteristic list
   # Works for CD and CT data
   
+  # x: a dataframe containing the imported census data
+  # characteristic: either ID or characteristic name of a table within the census data
+  # dguid: a geographic id to requiest a census table for
+  
   x <- x[DGUID == dguid,]
   x$CHARACTERISTIC_NAME <- iconv(x$CHARACTERISTIC_NAME, from = "latin1", to = "UTF-8", sub = "")
   categories <- grep("^[^ ]", x$CHARACTERISTIC_NAME, value = TRUE)
@@ -50,9 +54,10 @@ getCensusTable <- function(x, characteristic, dguid = "2021S051235300381"){
 
 
 listCensusTables <- function(x){
-  # Using 
-  #da_sel <- x[1,]
+
   # Works for CT and CD data
+  # x: a dataframe containing the imported census data
+
   id <- x$DGUID[1]
   d_da <- x[DGUID == id,]
   d_da$CHARACTERISTIC_NAME <- iconv(d_da$CHARACTERISTIC_NAME, from = "latin1", to = "UTF-8", sub = "")
@@ -61,18 +66,4 @@ listCensusTables <- function(x){
   return(result)
 }
 
-
-listCensusTables_CT <- function(x){
-  # Using 
-
-  char_names <- names(table(x$CHARACTERISTIC_NAME))
-  char_names <- iconv(char_names, from = "latin1", to = "UTF-8", sub = "")
-  categories <- grep("^[^ ]", char_names, value = TRUE)
-  
-  matched_ids <- x[CHARACTERISTIC_NAME %in% categories, .(CHARACTERISTIC_ID, CHARACTERISTIC_NAME)]
-  #print(matched_ids)
-  unique_ids <- matched_ids[!duplicated(CHARACTERISTIC_ID)]
-  
-  return(unique_ids)
-}
 
