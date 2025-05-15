@@ -14,8 +14,8 @@
 # 1. Load 2021 Census Data & Fill Missing Values
 # 2. Calculate % Tree Canopy Coverage (2019)
 # 3. Calculate Heat Disparity
-# 4. Calculate Priority Index
-# 5. Calculate Tree Equity Score
+# 4. Calculate Priority Index (site suitability)
+# 5. Calculate Tree Equity Score (site suitability +)
 # 6. Create Plots and Export Data
 
 
